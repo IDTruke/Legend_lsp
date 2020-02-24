@@ -54,8 +54,8 @@
 (defun selectObj (x)
   (setq selObj (Selection 0))
   (cond
-    ((= "LWPOLYLINE" (value selObj 0 "Empty")) (setq lst (list "L" (getstring 1 "\nTexte de légende") selObj)))
-    ((= "HATCH" (value selObj 0 "Empty")) (setq lst (list "H" (getstring 1 "\nTexte de légende") selObj)))
+    ((= "LWPOLYLINE" (value selObj 0 "Empty")) (setq lst (list "L" (InputBox "Saisie du texte" "Texte de légende :" "" '("" "azerty" "qwerty" "uiop")) selObj)));(getstring 1 "\nTexte de légende") selObj)))
+    ((= "HATCH" (value selObj 0 "Empty")) (setq lst (list "H" (InputBox "Saisie du texte" "Texte de légende :" "" '("" "azerty" "qwerty" "uiop")) selObj)));(getstring 1 "\nTexte de légende") selObj)))
     (T (DebugMsg "Erreur" "Type d'objet inconnu!")) )
   lst )
 
@@ -235,4 +235,86 @@
  ) ;_  entmakex
 ) ;_  defun
 
-
+;; InputBox (basé sur une macro de gile "CADxp")
+;; Ouvre une boite de dialogue pour récupérer une valeur
+;; sous forme de chaine de caractère
+;;
+;; Arguments
+;; tous les arguments sont de chaines de caractère (ou "")
+;; box : titre de la boite de dialogue
+;; msg : message d'invite
+;; val : valeur par défaut
+;; lst : liste déroulante
+;;
+;; Retour
+;; une chaine ("" si annulation)
+(defun InputBox (box msg val lst / subr temp file dcl_id ret)
+  
+  
+  ;; Retour chariot automatique à 50 caractères
+  (defun subr (str / pos)
+    (if (and
+          (< 50 (strlen str))
+          (setq pos (vl-string-position 32 (substr str 1 50) nil T))
+        )
+      (strcat ":text_part{label=\""
+              (substr str 1 pos)
+              "\";}"
+              (subr (substr str (+ 2 pos)))
+      )
+      (strcat ":text_part{label=\"" str "\";}")
+    )
+  )
+  ;; Créer un fichier DCL temporaire
+  (setq temp (vl-filename-mktemp "Tmp.dcl")
+        file (open temp "w")
+        ret  ""
+  )
+  ;; Ecrire le fichier
+  (write-line
+    (strcat
+      "InputBox
+      :dialog{
+      	key=\"box\";
+      	initial_focus=\"val\";
+      	spacer;
+      	:paragraph{"(subr msg) "} spacer;
+	:column{
+		:boxed_column{
+			label=\"Saisie manuelle\";
+		      	:edit_box{
+		      		key=\"val\";
+		      		edit_width=54;
+		      		allow_accept=true; } spacer;}
+		:boxed_column{
+			label=\"Liste\";
+			:popup_list{
+				key=\"selections\";
+				value = " (itoa (length lst)) ";} } }
+      	ok_cancel;}"
+    )
+    file
+  )
+  (close file)
+  ;; Ouvrir la boite de dialogue
+  (setq choix lst)
+  (setq dcl_id (load_dialog temp))
+  (if (not (new_dialog "InputBox" dcl_id))      
+    (exit)
+  )
+  (set_tile "box" box)
+  (set_tile "val" val)
+  (start_list "selections")
+  (mapcar 'add_list choix)
+  
+  (end_list)
+  (action_tile
+    "accept"
+    "(setq ret (strcat (get_tile \"val\") (nth (atoi (get_tile \"selections\")) choix))) (done_dialog)"
+  )
+  (start_dialog)
+  (unload_dialog dcl_id)
+  ;;Supprimer le fichier
+  (vl-file-delete temp)
+  ret
+)
