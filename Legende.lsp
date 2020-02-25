@@ -1,6 +1,6 @@
 ;*******************************************************************;
 ;***                                                             ***;
-;***                      GÈnÈrateur de lÈgende                  ***;
+;***                      G√©n√©rateur de l√©gende                  ***;
 ;***                                                             ***;
 ;*******************************************************************;
 
@@ -19,7 +19,25 @@
   ;*****************GESTION DU TYPE DE LIGNE*********************;
   (command "_.LINETYPE" "A" "Continuous" "" "")
 
-  ;**************Ajout des objets ‡ la lÈgende********************;
+  ;***********Listes pour l√©gende (domaine routier)**************;
+  (setq LGD_line
+	 '(""
+	 "Bordure T2 gr√©s"
+	 "Bordure T2 gr√©s abaiss√©e"
+	 "Caniveau CC1 b√©ton"
+  	 "Bordure I2 b√©ton \"Lumisilice\""
+	 "Bordure P1 b√©ton"
+	 "Bordure quai bus") )
+  (setq LGD_hatch
+	 '(""
+	 "Enrob√© noir BBSG 0/10"
+	 "Enrob√© noir BB 0/6"
+	 "Enrob√© rouge BB 0/6"
+	 "Enrob√© b√©ton d√©sactiv√©"
+	 "Espace v√©g√©talis√© √† cr√©er"
+	 "Espace v√©g√©talis√© existant") )
+
+  ;**************Ajout des objets √† la l√©gende********************;
   ;*******************Choix du type d'objet***********************;
   (setq lstObj '())
   (setq lstObj (list (selectObj 0)))
@@ -27,17 +45,17 @@
   (setq multiSel "Oui")
   (while (= multiSel "Oui")
     (initget 1 "Oui Non")
-    (setq multiSel (getkword "\nSÈlection supplÈmentaire ? [Oui/Non] :"))
+    (setq multiSel (getkword "\nS√©lection suppl√©mentaire ? [Oui/Non] :"))
     (if (= multiSel "Oui")
       (and (setq lstObj (append lstObj (list (selectObj 0)))) (setq nbObj (+ nbObj 1)))
-      (alert "Fin de la sÈlection") ) )
+      (alert "Fin de la s√©lection") ) )
 
   ;**************Choix de la zone de tracage********************;
   (setq ins (getpoint "\nChoisir le point d'insertion: "))
 
-  ;***********Dessine les ÈlÈments de la lÈgende****************;
+  ;***********Dessine les √©l√©ments de la l√©gende****************;
   (dessineLGD ins (+ nbObj 1) (triLGD lstObj))
-  (debugMsg "Information" "Traitement terminÈ")
+  (debugMsg "Information" "Traitement termin√©")
   (princ) )
 
 
@@ -50,30 +68,30 @@
   (command "._layer" "_S" layer "")
   (princ) )
 
-;*********************SÈlection des objets**********************;
+;*********************S√©lection des objets**********************;
 (defun selectObj (x)
   (setq selObj (Selection 0))
   (cond
-    ((= "LWPOLYLINE" (value selObj 0 "Empty")) (setq lst (list "L" (InputBox "Saisie du texte" "Texte de lÈgende :" "" '("" "azerty" "qwerty" "uiop")) selObj)));(getstring 1 "\nTexte de lÈgende") selObj)))
-    ((= "HATCH" (value selObj 0 "Empty")) (setq lst (list "H" (InputBox "Saisie du texte" "Texte de lÈgende :" "" '("" "azerty" "qwerty" "uiop")) selObj)));(getstring 1 "\nTexte de lÈgende") selObj)))
+    ((= "LWPOLYLINE" (value selObj 0 "Empty")) (setq lst (list "L" (InputBox "Saisie du texte" "Texte de l√©gende :" "" LGD_line) selObj)))
+    ((= "HATCH" (value selObj 0 "Empty")) (setq lst (list "H" (InputBox "Saisie du texte" "Texte de l√©gende :" "" LGD_hatch) selObj)))
     (T (DebugMsg "Erreur" "Type d'objet inconnu!")) )
   lst )
 
-;**************************SÈlection****************************;
+;**************************S√©lection****************************;
 (defun Selection (x)
   (setq linSel (entsel))
   (setq linInfo (entget (car linSel)))
-  (setq result (append (list (cadr linInfo)) (cdddr linInfo))) ;Èlimine les informations problÈmatique avec < ou >
+  (setq result (append (list (cadr linInfo)) (cdddr linInfo))) ;√©limine les informations probl√©matique avec < ou >
   result )
 
-;*********************Dessine la lÈgende***********************;
+;*********************Dessine la l√©gende***********************;
 (defun dessineLGD (ptInsert nbLines lst)
   (setq x (car ptInsert))
   (setq y (cadr ptInsert))
   (setq larg 20)
   (setq htr (+ 2 (* nbLines 3)))
   (drawObj "L" (list (list x y) (list (+ x larg) y) (list (+ x larg) (+ y htr)) (list x (+ y htr))) 250 1 "Continuous" 0.0 0.0 1)
-  (M-Text (list (+ x (/ larg 2)) (+ y (- htr 1))) "LÈgende" 5)
+  (M-Text (list (+ x (/ larg 2)) (+ y (- htr 1))) "L√©gende" 5)
   (setq n nbLines)
   (foreach elem lst
     (if (= "L" (car elem))
@@ -130,7 +148,7 @@
   (setq result (append lstL lstH))
   result )
 
-;*******************CrÈation polyligne************************;
+;*******************Cr√©ation polyligne************************;
 ;+ d'infos : https://www.autodesk.com/techpubs/autocad/acad2000/dxf/lwpolyline_dxf_06.htm
 (defun drawObj (typ lst color cls linetype startW endW scale)
   (cond
@@ -148,7 +166,7 @@
     ((= typ "H")
      (entmakex-hatch (list lst) cls linetype scale color) ) ) )
 
-;*********************CrÈation texte**************************;
+;*********************Cr√©ation texte**************************;
 ;+ d'infos : https://www.autodesk.com/techpubs/autocad/acad2000/dxf/mtext_dxf_06.htm
 (defun M-Text (pt str align)
   (entmakex (list (cons 0 "MTEXT")
@@ -159,11 +177,11 @@
 		  (cons 10 pt)
 		  (cons 1 str) )))
 
-;************************DÈboguage****************************;
+;************************D√©boguage****************************;
 (defun debugMsg (txt var)
   (print (strcat txt " : "))(prin1 var) )
 
-;*********************CrÈation hachures***********************;
+;*********************Cr√©ation hachures***********************;
 ;; By ElpanovEvgeniy
 (defun entmakex-hatch (L a n s c)
  ;; L - list point
@@ -235,23 +253,23 @@
  ) ;_  entmakex
 ) ;_  defun
 
-;; InputBox (basÈ sur une macro de gile "CADxp")
-;; Ouvre une boite de dialogue pour rÈcupÈrer une valeur
-;; sous forme de chaine de caractËre
+;; InputBox (bas√© sur une macro de gile "CADxp")
+;; Ouvre une boite de dialogue pour r√©cup√©rer une valeur
+;; sous forme de chaine de caract√®re
 ;;
 ;; Arguments
-;; tous les arguments sont de chaines de caractËre (ou "")
+;; tous les arguments sont de chaines de caract√®re (ou "")
 ;; box : titre de la boite de dialogue
 ;; msg : message d'invite
-;; val : valeur par dÈfaut
-;; lst : liste dÈroulante
+;; val : valeur par d√©faut
+;; lst : liste d√©roulante
 ;;
 ;; Retour
 ;; une chaine ("" si annulation)
 (defun InputBox (box msg val lst / subr temp file dcl_id ret)
   
   
-  ;; Retour chariot automatique ‡ 50 caractËres
+  ;; Retour chariot automatique √† 50 caract√®res
   (defun subr (str / pos)
     (if (and
           (< 50 (strlen str))
@@ -265,7 +283,7 @@
       (strcat ":text_part{label=\"" str "\";}")
     )
   )
-  ;; CrÈer un fichier DCL temporaire
+  ;; Cr√©er un fichier DCL temporaire
   (setq temp (vl-filename-mktemp "Tmp.dcl")
         file (open temp "w")
         ret  ""
